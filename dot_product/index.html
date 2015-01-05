@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html>
+    <head>
+      <meta charset="utf-8">
+
+      <script src="http://d3js.org/d3.v3.js"></script>
+
+      <style>
+
+        body {
+          font: 13pt courier;
+          font-weight: bold;
+          background-color: #111;
+          overflow-y:hidden;
+          color: #ccc;
+        }
+
+        .red_line {
+          fill: none;
+          stroke: crimson;
+          stroke-width: 2px;
+          stroke-linecap: round;
+          opacity: 0.8;
+        }
+
+        .blue {
+          fill: #66C;
+        }
+
+        .red {
+          fill: crimson;
+        }
+
+        .blue_line {
+          fill: none;
+          stroke: #66C;
+          stroke-width: 2px;
+          stroke-linecap: round;
+          opacity: 0.8;
+        }
+
+        .yellow {
+          fill: #CC4 ;
+        }
+
+      </style>
+    </head>
+    <body>
+        <script type="text/javascript">
+            var width  = 320 ;
+            var height = 320 ;
+            var dom    = 4 ;
+            var maxL   = dom * 3 / 5 ;
+            var minL   = 0 ;
+            var maxL2  = maxL * maxL ;
+            var minL2  = minL * minL ;
+            var markHeight = 4 ;
+            var pad = .45 ;
+
+            var x = d3.scale.linear()
+                .domain([-dom, dom])
+                .range([0, width]) ;
+
+            var y = d3.scale.linear()
+                .domain([-dom, dom])
+                .range([height, 0]) ;
+
+            var invMark = x.invert(markHeight) - x.invert(0) ;
+            var scale = 1 - invMark ;
+            maxL -= invMark ;
+            minL += invMark ;
+
+            var line = d3.svg.line()
+                .interpolate('basis')
+                .x(function(d) { return x(d.x) ; })
+                .y(function(d) { return y(d.y) ; }) ;
+
+            var svg = d3
+              .select("body")
+              .append("svg")
+              .attr("viewBox", '0 0 ' + 2 * width + ' ' + 2 * height) ;
+              // .attr("preserveAspectRatio", "xMidYMin meet")
+              // .style('max-height', '90%')
+              // .style('min-height', '600px') ;
+
+            svg
+                .append('defs')
+                .append('marker')
+                .attr('id', 'redMarker')
+                .attr('orient', 'auto')
+                .attr('markerWidth', 2)
+                .attr('markerHeight', markHeight)
+                .attr('refX', 0.1)
+                .attr('refY', 2)
+                .append('path')
+                .attr('d', 'M0,0 V4 L2,2 Z')
+                .attr('fill', 'crimson') ; 
+
+            svg
+                .append('marker')
+                .attr('id', 'blueMarker')
+                .attr('orient', 'auto')
+                .attr('markerWidth', 2)
+                .attr('markerHeight', markHeight)
+                .attr('refX', 0.1)
+                .attr('refY', 2)
+                .append('path')
+                .attr('d', 'M0,0 V4 L2,2 Z')
+                .attr('fill', '#66C') ;
+
+            var g = svg
+               .append("g")
+               //.attr("transform", "rotate(-60, 160, 160)")
+               .style('opacity', 0) ;
+
+            var unitCircle = g
+                    .append('circle')
+                    .attr('fill', '#FFF')
+                    .attr('opacity', .05)
+                    .attr('r', x(1) - x(0))
+                    .attr('cx', x(0))
+                    .attr('cy', y(0))
+
+            var redLine = g
+                .append('path')
+                .attr('class', 'red_line')
+                .attr('marker-end', 'url(#redMarker)') ;
+
+            var blueLine = g
+                .append('path')
+                .attr('class', 'blue_line')
+                .attr('marker-end', 'url(#blueMarker)') ;
+
+            var root2 = Math.sqrt(2) ;
+            var r2i   = 1 / root2 ;
+            var da    = [{x: 0, y: 0}, {x: 0, y: scale}] ;
+            var db    = [{x: 0, y: 0}, {x: r2i * scale, y: r2i * scale}] ;
+            var dur   = 710 ;
+
+            redLine
+                .datum(da)
+                .attr("d", line)
+
+            blueLine
+                .datum(db)
+                .attr("d", line)
+
+            var dragSwitch = true ;
+
+            var length = function(d) {
+                return Math.sqrt(d.x * d.x + d.y * d.y) ;
+            }
+
+            var circHover = function(node) {
+              dragSwitch = true ;
+              d3.select(node)
+                .transition()
+                .ease('linear')
+                .duration(dur * 0.5)
+                .style('opacity', 0.3) ;
+            } ;
+
+            var circOut = function(node) {
+              dragSwitch = false ;
+              d3.select(node)
+                .transition()
+                .ease('linear')
+                .duration(dur * 0.5)
+                .style('opacity', 0) ;
+            } ;
+
+            var unitSwitch = false ;
+
+            var set_unit = function(animateSwitch) {
+                if(animateSwitch === undefined) animateSwitch = false ;
+                var xk, yk, l ;
+                xk = da[1].x ;
+                yk = da[1].y ;
+                l  = Math.sqrt(xk * xk + yk * yk) / scale ;
+                da[1].x /= l ;
+                da[1].y /= l ;
+                xk = db[1].x ;
+                yk = db[1].y ;
+                l  = Math.sqrt(xk * xk + yk * yk) / scale ;
+                db[1].x /= l ;
+                db[1].y /= l ;
+                if(animateSwitch) {
+                    redLine
+                        .transition()
+                        .ease('linear')
+                        .duration(dur * 0.5)
+                        .attr('d', line) ;
+                    blueLine
+                        .transition()
+                        .ease('linear')
+                        .duration(dur * 0.5)
+                        .attr('d', line) ;
+                    redCircle
+                        .transition()
+                        .ease('linear')
+                        .duration(dur * 0.5)
+                        .attr('cx', x(da[1].x))
+                        .attr('cy', y(da[1].y)) ;   
+                    blueCircle
+                        .transition()
+                        .ease('linear')
+                        .duration(dur * 0.5)
+                        .attr('cx', x(db[1].x))
+                        .attr('cy', y(db[1].y)) ;
+                } else {
+                    redLine.attr('d', line) ;
+                    blueLine.attr('d', line) ;
+                    redCircle
+                        .attr('cx', x(da[1].x))
+                        .attr('cy', y(da[1].y)) ;
+                    blueCircle
+                        .attr('cx', x(db[1].x))
+                        .attr('cy', y(db[1].y)) ;
+                }
+            } ;
+
+            //
+            // arc * angle:
+            //
+
+            var angle = function() {
+                var angA = angl(da) ;
+                var angB = angl(db) ;
+                if(Math.abs(angA - angB) > Math.PI) {
+                    if(angA < 0) angA = 2 * Math.PI - Math.abs(angA) ;
+                    if(angB < 0) angB = 2 * Math.PI - Math.abs(angB) ;
+                }
+                return [angA, angB] ;
+            } ;
+
+            var angl = function(d) {
+                var ang ; 
+                var len = Math.sqrt(d[1].x * d[1].x + d[1].y * d[1].y) ;
+                if(d[1].y < 0 && d[1].x > 0) {
+                  ang = Math.PI / 2 + Math.acos(d[1].x / len) ;
+                } else if (d[1].y < 0 && d[1].x < 0) {
+                  ang = -3 * Math.PI / 2 + Math.acos(d[1].x / len) ;
+                } else {
+                  ang = Math.PI / 2 - Math.acos(d[1].x / len) ;
+                }
+                return ang ;
+            } ;
+            
+            var ang = angle() ;
+
+            var arc = d3.svg.arc()
+                .innerRadius(8)
+                .outerRadius(10)
+                .startAngle(ang[0])
+                .endAngle(ang[1]) ;
+
+            var arcLine = g
+                .append("path")
+                .attr("d", arc)
+                .attr('class', 'yellow')
+                .attr("transform", 'translate(' + width / 2 + ',' + height / 2 + ')') ;
+
+            var get_mid = function() {
+                var lenA   = Math.sqrt(da[1].x * da[1].x + da[1].y * da[1].y) ;
+                var lenB   = Math.sqrt(db[1].x * db[1].x + db[1].y * db[1].y) ;
+                var xMid   = 0.5 * (da[1].x / lenA + db[1].x / lenB) ;
+                var yMid   = 0.5 * (da[1].y / lenA + db[1].y / lenB) ;
+                var mLen   = Math.sqrt(xMid * xMid + yMid * yMid) ;
+                var mscale = .5  / mLen ;
+                xMid      *= mscale ;
+                yMid      *= mscale ;                
+                return [xMid, yMid] ;
+            }
+
+            var mid = get_mid() ;
+
+            var thetaText = g
+                .append('text')
+                .attr('x', x(mid[0]))
+                .attr('y', y(mid[1]))
+                .text('θ') // 
+                .style('font', 'courier')
+                .style('font-size', '6pt') 
+                .attr('class', 'yellow') ;
+
+            //
+            // drag:
+            //
+
+            var circDrag = function(d, element) {
+                //var xy0 = d3.mouse(g.node()) ;
+                if(dragSwitch === false) { 
+                    return ;
+                }
+                var dx  = d3.event.dx ;
+                var dy  = d3.event.dy ;
+                var dd  = d.datum() ;
+                var x1  = dd[1].x ;
+                var y1  = dd[1].y ;
+                var xi  = x(x1) + dx ;
+                var yi  = y(y1) + dy ;
+                x1      = x.invert(xi) ;
+                y1      = y.invert(yi) ;
+                var l2  = x1 * x1 + y1 * y1 ;
+                var len = Math.sqrt(l2) ;
+                if(l2 > maxL2) {
+                    var li = 1 / len ;
+                    x1 = x1 * li * maxL ;
+                    y1 = y1 * li * maxL ;
+                    len = maxL ;
+                }
+                if(l2 < minL2) {
+                    var li = 1 / len ;
+                    x1 = x1 * li * minL ;
+                    y1 = y1 * li * minL ;
+                    len = minL ;
+                }
+
+                d3.select(element)
+                    .attr('cx', x(x1))
+                    .attr('cy', y(y1)) ;
+
+                dd[1].x = x1 ;
+                dd[1].y = y1 ;
+                if(unitSwitch) {
+                    set_unit() ;
+                } else {                    
+                    d.attr('d', line) ;                // console.log('drag', element, xy0) ;
+                }
+
+                var ang = angle() ;
+
+                arc
+                    .startAngle(ang[0])
+                    .endAngle(ang[1]) ;
+
+                arcLine.attr('d', arc)
+
+                mid = get_mid() ;
+
+                thetaText
+                    .attr('x', x(mid[0]))
+                    .attr('y', y(mid[1])) ;
+
+                aText
+                    .attr('x', x(da[1].x + pad * da[1].x / length(da[1])))
+                    .attr('y', y(da[1].y + pad * da[1].y / length(da[1]))) ;
+
+                bText
+                    .attr('x', x(db[1].x + pad * db[1].x / length(db[1])))
+                    .attr('y', y(db[1].y + pad * db[1].y / length(db[1]))) ;
+
+                vecText() ;
+            } ;
+
+            aText = g
+                .append('text')
+                .text('a')
+                .attr('x', x(da[1].x + pad * da[1].x / length(da[1])))
+                .attr('y', y(da[1].y + pad * da[1].y / length(da[1])))
+                .style('font', 'courier')
+                .style('font-size', '12pt') 
+                .attr('class', 'red') ;
+
+            bText = g
+                .append('text')
+                .text('b')
+                .attr('x', x(db[1].x + pad * db[1].x / length(db[1])))
+                .attr('y', y(db[1].y + pad * db[1].y / length(db[1])))
+                .style('font', 'courier')
+                .style('font-size', '12pt') 
+                .attr('class', 'blue') ;
+
+            var redCircle = g
+                .append('circle')
+                .datum(redLine)
+                .attr('fill', '#0C0')
+                .attr('opacity', 0)
+                .attr('r', 20)
+                .attr('cx', x(da[1].x))
+                .attr('cy', y(da[1].y))
+                .on('mouseup', function() { circOut(this) })
+                .on('mousedown', function() { circHover(this) })
+                .on('mouseleave', function() { circOut(this) })
+                .on('mouseenter', function() { circHover(this) }) ;
+
+            var blueCircle = g
+                .append('circle')
+                .datum(blueLine)
+                .attr('fill', '#0C0')
+                .attr('opacity', 0)
+                .attr('r', 20)
+                .attr('cx', x(db[1].x))
+                .attr('cy', y(db[1].y))
+                .on('mouseup', function() { circOut(this) })
+                .on('mousedown', function() { circHover(this) }) 
+                .on('mouseleave', function() { circOut(this) })
+                .on('mouseenter', function() { circHover(this) }) ;
+
+            blueCircle.call(d3.behavior.drag().origin(Object).on("drag", function(d) { circDrag(d, this) } )) ;
+            redCircle .call(d3.behavior.drag().origin(Object).on("drag", function(d) { circDrag(d, this) } )) ;
+
+            var unitBox = g
+                .append('rect') ;
+
+            var unitToggle = function() {
+                var fill ;
+                if(unitSwitch) {
+                    unitSwitch = false ;
+                    fill = '#111' ;
+                } else {
+                    unitSwitch = true ;
+                    fill = '#999' ;
+                    var animateSwitch = true ;
+                    set_unit(animateSwitch) ;
+                }
+                unitBox
+                    .transition()
+                    .duration(100)
+                    .ease('linear')
+                    .attr('fill', fill) ;
+            } ;
+
+            unitBox
+                .attr('x', 20)
+                .attr('y', 10)
+                .attr('rx', 2)
+                .attr('ry', 2)
+                .attr('fill', '#111')
+                .attr('width', 10)
+                .attr('height', 10)
+                .attr('stroke', '#CCC')
+                .attr('stroke-width', 1.5)
+                .on('click', unitToggle) ;
+
+            var unitText = g
+                .append('text') ;
+
+            unitText
+                .attr('x', 34)
+                .attr('y', 17)
+                .text('unit length')
+                .style('font', 'courier')
+                .style('font-size', '6pt') 
+                .style('fill', '#ccc')
+                .on('click', unitToggle) ;
+
+            var dotDef = g
+                .append('text')
+                .attr('x', 120)
+                .attr('y', 56)
+                .style('font', 'courier')
+                .style('font-size', '6pt') 
+                .style('fill', '#ccc') ;
+
+            var unscale = function(d) {
+                var len = length(d) ;
+                len     = (len + invMark) / len ;
+                return [d.x * len, d.y * len] ;
+            } ;
+
+            var aVec = g
+                .append('text')
+                .attr('x', 120)
+                .attr('y', 17)
+                .style('font', 'courier')
+                .style('font-size', '6pt') 
+                .style('fill', '#ccc') ;
+
+            var aLen = g
+                .append('text')
+                .attr('x', 220)
+                .attr('y', 17)
+                .style('font', 'courier')
+                .style('font-size', '6pt') 
+                .style('fill', '#ccc') ;
+
+            var bVec = g
+                .append('text')
+                .attr('x', 120)
+                .attr('y', 30)
+                .style('font', 'courier')
+                .style('font-size', '6pt') 
+                .style('fill', '#ccc') ;
+
+            var bLen = g
+                .append('text')
+                .attr('x', 220)
+                .attr('y', 30)
+                .style('font', 'courier')
+                .style('font-size', '6pt') 
+                .style('fill', '#ccc') ;
+
+            var thetaVal = g
+                .append('text')
+                .attr('x', 120)
+                .attr('y', 43)
+                .style('font', 'courier')
+                .style('font-size', '6pt') 
+                .style('fill', '#ccc') ;            
+
+            var cosVal = g
+                .append('text')
+                .attr('x', 220)
+                .attr('y', 43)
+                .style('font', 'courier')
+                .style('font-size', '6pt') 
+                .style('fill', '#ccc') ;            
+
+            var vecText = function() {                
+                var a = unscale(da[1]) ;
+                var b = unscale(db[1]) ;
+                aVec.html('a = (' + a[0].toPrecision(2) + ', ' + a[1].toPrecision(2) + ')') ;
+                bVec.html('b = (' + b[0].toPrecision(2) + ', ' + b[1].toPrecision(2) + ')') ;
+                aLen.html('|a| = ' + Math.sqrt(a[0] * a[0] + a[1] * a[1]).toPrecision(2)) ;
+                bLen.html('|b| = ' + Math.sqrt(b[0] * b[0] + b[1] * b[1]).toPrecision(2)) ;
+                var ang = angle() ;
+                thetaVal.html('θ = ' + Math.abs(ang[0] - ang[1]).toPrecision(2)) ;
+                cosVal.html('cos θ = ' + Math.cos(Math.abs(ang[0] - ang[1])).toPrecision(2)) ;
+                dotDef.html('(a, b) = ' + (a[0] * b[0] + a[1] * b[1]).toPrecision(2) + ' = |a| |b| cos θ = a<tspan baseline-shift="sub">x</tspan> b<tspan baseline-shift="sub">x</tspan> + a<tspan baseline-shift="sub">y</tspan> b<tspan baseline-shift="sub">y</tspan>') ;
+            } ;
+
+            vecText() ;
+
+            g
+                .transition()
+                .duration(dur)
+                .ease('linear')
+                .style('opacity', 1) ;
+
+        </script>
+    </body>
+</html>
